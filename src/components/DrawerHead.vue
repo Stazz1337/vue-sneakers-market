@@ -1,6 +1,12 @@
+<script setup>
+import { inject } from 'vue'
+const closeDrawer = inject('closeDrawer')
+</script>
+
 <template>
   <div class="flex items-center gap-5 mb-8">
     <svg
+      @click="closeDrawer"
       class="cursor-pointer opacity-30 rotate-180 hover:opacity-100 transition hover:-translate-x-1"
       width="16"
       height="14"

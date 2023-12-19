@@ -4,7 +4,7 @@ defineProps({
   title: String,
   price: Number,
   isFavorite: Boolean,
-  isAddedToCart: Boolean,
+  isAdded: Boolean,
   onclickAddToCart: Function,
   onclickFavorite: Function
 })
@@ -32,7 +32,7 @@ defineProps({
       </div>
       <img
         @click="onclickAddToCart"
-        :src="isAddedToCart ? '/plus.svg' : '/checked.svg'"
+        :src="!isAdded ? '/plus.svg' : '/checked.svg'"
         alt="Plus"
       />
     </div>
