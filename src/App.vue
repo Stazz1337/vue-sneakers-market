@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, provide, reactive, ref, watch } from 'vue'
+import { onMounted, provide, reactive, ref, watch, computed } from 'vue'
 import axios from 'axios'
 import Header from './components/Header.vue'
 import CardList from './components/CardList.vue'
@@ -7,22 +7,52 @@ import Drawer from './components/Drawer.vue'
 
 const items = ref([])
 const drawerOpen = ref(false)
-
 const cartItems = ref([])
 
-const addToCart = (item) => {
-  if (!item.isAdded) {
-    cartItems.value.push(item)
-    item.isAdded = true
-    
-  
-  } else {
-    cartItems.value = cartItems.value.filter((cartItem) => cartItem.id !== item.id)
-    item.isAdded = false
-  }
+const isCreateOrderLoading = ref(false)
 
-  console.log(cartItems)
-  
+const totalPrice = computed(() => cartItems.value.reduce((acc, item) => acc + item.price, 0))
+const vatPrice = computed(() => Math.round(totalPrice.value * 0.05))
+
+const addToCart = (item) => {
+  cartItems.value.push(item)
+  item.isAdded = true
+  console.log(cartItems.value)
+}
+
+const removeFromCart = (item) => {
+  console.log(item)
+  cartItems.value = cartItems.value.filter((cartItem) => cartItem.id !== item.id)
+  item.isAdded = false
+}
+
+const handleClickPlus = (item) => {
+  if (!item.isAdded) {
+    addToCart(item)
+  } else {
+    removeFromCart(item)
+  }
+}
+
+const isCartButtonDisabled = computed(
+  () => isCreateOrderLoading.value || cartItems.value.length === 0
+)
+
+const createOrder = async () => {
+  try {
+    isCreateOrderLoading.value = true
+    const { data } = await axios.post('https://c106f40a73ac218b.mokky.dev/orders', {
+      items: cartItems.value,
+      totalPrice: totalPrice.value
+    })
+    cartItems.value = []
+    console.log(data)
+    return data
+  } catch (error) {
+    console.log(error)
+  } finally {
+    isCreateOrderLoading.value = false
+  }
 }
 
 const closeDrawer = () => {
@@ -88,15 +118,41 @@ const fetchItems = async () => {
 }
 
 onMounted(async () => {
+  cartItems.value = JSON.parse(localStorage.getItem('cart')) || []
+
+ 
+
   await fetchItems()
   await fetchItemsFavorites()
+
+  items.value = items.value.map((item) => ({
+    ...item,
+    isAdded: cartItems.value.some((cartItem) => cartItem.id === item.id)
+  }))
 })
 
 watch(filters, fetchItems)
 
+watch(cartItems, () => {
+  items.value = items.value.map((item) => ({
+    ...item,
+    isAdded: false
+  }))
+})
+
+watch(
+  cartItems,
+  () => {
+    localStorage.setItem('cart', JSON.stringify(cartItems.value))
+  },
+  {
+    deep: true
+  }
+)
+
 provide('closeDrawer', closeDrawer)
 provide('cartItems', cartItems)
-
+provide('removeFromCart', removeFromCart)
 
 const onclickFavorite = async (item) => {
   try {
@@ -120,8 +176,14 @@ const onclickFavorite = async (item) => {
 
 <template>
   <div class="bg-white w-4/5 m-auto rounded-xl shadow-xl mt-14">
-    <Drawer v-if="drawerOpen" />
-    <Header @openDrawer="openDrawer" />
+    <Drawer
+      v-if="drawerOpen"
+      :vatPrice="vatPrice"
+      :totalPrice="totalPrice"
+      @createOrder="createOrder"
+      :isCartButtonDisabled="isCartButtonDisabled"
+    />
+    <Header @openDrawer="openDrawer" :totalPrice="totalPrice" />
     <div class="p-10">
       <div class="flex justify-between items-center">
         <h2 class="text-3xl font-bold mb-8">Все кроссовки</h2>
@@ -149,7 +211,11 @@ const onclickFavorite = async (item) => {
           </div>
         </div>
       </div>
-      <CardList :items="items" @onclickFavorite="onclickFavorite" @addToCart="addToCart" />
+      <CardList
+        :items="items"
+        @onclickFavorite="onclickFavorite"
+        @handleClickPlus="handleClickPlus"
+      />
     </div>
   </div>
 </template>

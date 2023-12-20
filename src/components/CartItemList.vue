@@ -3,6 +3,7 @@ import { inject } from 'vue'
 import CartItem from './CartItem.vue'
 
 const cartItems = inject('cartItems')
+const removeFromCart = inject('removeFromCart')
 </script>
 
 <template>
@@ -14,6 +15,7 @@ const cartItems = inject('cartItems')
       :title="item.title"
       :price="item.price"
       :imageUrl="item.imageUrl"
+      @removeFromCart="removeFromCart(item)"
     />
   </div>
 </template>
